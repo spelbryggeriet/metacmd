@@ -1,0 +1,146 @@
+name: Create Release
+
+on: workflow_dispatch
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_VERSION: 1.70.0
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.get_release_number.outputs.value }}
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check branch
+      run: |
+        if [[ ! `git branch --show-current` = 'main' ]] ; then
+          echo "Releases can only be created from the \`main\` branch" >&2
+          exit 1
+        fi
+
+    - name: Prepare repo
+      run: |
+        git fetch --tags
+
+    - name: Bump version
+      run: |
+        scripts/bump_version.py
+
+    - name: Get version
+      id: get_version
+      run: |
+        version=`scripts/get_version.py`
+        echo "version=$version" >> $GITHUB_OUTPUT
+
+    - name: Create release branch
+      id: create_release_branch
+      run: |
+        release_branch="release/v${VERSION}"
+        git checkout -b "$release_branch"
+        git \
+          -c author.name=${{ github.actor }} \
+          -c author.email=${{ github.actor }}@users.noreply.github.com \
+          -c committer.name=Github \
+          -c committer.email=noreply@github.com \
+          commit -a -m "Prepare release v${VERSION}"
+        git push --set-upstream origin "$release_branch"
+        echo "release_branch=$release_branch" >> $GITHUB_OUTPUT
+      env:
+        VERSION: ${{ steps.get_version.outputs.version }}
+
+    - name: Create pull request
+      id: create_pull_request
+      uses: octokit/request-action@v2.x
+      with:
+        route: POST /repos/${{ github.repository }}/pulls
+        title: Release v${{ env.VERSION }}
+        body: Bump to version v${{ env.VERSION }}.
+        base: main
+        head: ${{ env.RELEASE_BRANCH }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_BRANCH: ${{ steps.create_release_branch.outputs.release_branch }}
+        VERSION: ${{ steps.get_version.outputs.version }}
+
+    - name: Get pull request number
+      id: get_pull_request_number
+      uses: sergeysova/jq-action@v2
+      with:
+        cmd: echo '${{ steps.create_pull_request.outputs.data }}' | jq .number -r
+      env:
+        JSON_DATA: ${{ steps.create_pull_request.outputs.data }}
+
+    - name: Merge pull request
+      uses: octokit/request-action@v2.x
+      with:
+        route: PUT /repos/${{ github.repository }}/pulls/${{ env.PULL_NUMBER }}/merge
+        commit_title: Prepare release v${{ env.VERSION }} (#${{ env.PULL_NUMBER }})
+        merge_method: squash
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PULL_NUMBER: ${{ steps.get_pull_request_number.outputs.value }}
+        VERSION: ${{ steps.get_version.outputs.version }}
+
+    - name: Get changelog
+      id: get_changelog
+      run: |
+        changelog_body=`scripts/get_changelog.py`
+        echo "changelog_body=${changelog_body}" >> $GITHUB_OUTPUT
+
+    - name: Create release draft
+      id: create_release_draft
+      uses: octokit/request-action@v2.x
+      with:
+        route: POST /repos/${{ github.repository }}/releases
+        tag_name: v${{ env.VERSION }}
+        target_commitish: main
+        name: v${{ env.VERSION }}
+        body: |-
+          ${{ steps.get_changelog.outputs.changelog_body }}
+        draft: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VERSION: ${{ steps.get_version.outputs.version }}
+
+    - name: Get release number
+      id: get_release_number
+      uses: sergeysova/jq-action@v2
+      with:
+        cmd: echo '${{ steps.create_release_draft.outputs.data }}' | jq .id -r
+      env:
+        JSON_DATA: ${{ steps.create_pull_request.outputs.data }}
+
+  build_and_publish:
+    needs: prepare
+    env:
+        RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        ref: main
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ env.RUST_VERSION }}
+        default: true
+
+    - name: Publish release
+      uses: octokit/request-action@v2.x
+      with:
+        route: PATCH /repos/${{ github.repository }}/releases/${{ env.RELEASE_ID }}
+        draft: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish crate
+      uses: actions-rs/cargo@v1
+      with:
+        command: publish
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}

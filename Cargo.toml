@@ -1,0 +1,11 @@
+[package]
+name = "metacmd"
+version = "0.0.0"
+edition = "2021"
+description = "Abstracting commands over multiple environments"
+readme = "README.md"
+homepage = "https://github.com/spelbryggeriet/metacmd"
+repository = "https://github.com/spelbryggeriet/metacmd"
+license = "Apache-2.0"
+keywords = ["command", "parser", "process"]
+categories = ["parser-implementations"]
