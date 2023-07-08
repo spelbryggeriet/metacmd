@@ -37,12 +37,6 @@ def get_next_version(bump_comp_idx, current_version):
     return f"{major}.{minor}.{patch}"
 
 
-def update_version_file(new_version, path):
-    version_path = os.path.join(REPO_DIR, path)
-    with open(version_path, "w") as f:
-        f.write(new_version)
-
-
 def parse_git_history():
     versions, _ = run("git", "-C", REPO_DIR, "tag", "--sort", "v:refname")
     prev_versions = [None, *versions.splitlines()]
@@ -136,6 +130,25 @@ def parse_git_history():
     return contexts
 
 
+def update_version_file(new_version, path):
+    version_path = os.path.join(REPO_DIR, path)
+    with open(version_path, "w") as f:
+        f.write(new_version)
+
+
+def update_manifest(new_version, path, current_version):
+    manifest_path = os.path.join(REPO_DIR, path)
+    with open(manifest_path, "r") as f:
+        content = f.read()
+
+    new_content = re.sub(f'^(\[package\]\n(?:\w+ = .*\n)*?version = "){current_version}', f"\g<1>{new_version}", content, count=1)
+    if new_content == content:
+        error(f"Failed to find version field in {path}")
+
+    with open(manifest_path, "w") as f:
+        f.write(new_content)
+
+
 def update_changelog(contexts, path):
     changelog = (
         "# Changelog\n\n"
@@ -177,10 +190,12 @@ def update_changelog(contexts, path):
 def bump_version(dry_run):
     contexts = parse_git_history()
 
+    current_version = get_current_version()
     new_version = contexts[-1]["version"]
 
     if not dry_run:
         update_version_file(new_version, "VERSION")
+        update_manifest(new_version, "Cargo.toml", current_version)
         update_changelog(contexts, "CHANGELOG.md")
 
     return new_version
