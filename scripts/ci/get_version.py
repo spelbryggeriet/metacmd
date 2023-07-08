@@ -4,7 +4,7 @@ import os
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-REPO_DIR = os.path.realpath(os.path.join(SCRIPT_DIR, ".."))
+REPO_DIR = os.path.realpath(os.path.join(SCRIPT_DIR, "../.."))
 
 
 def get_version():
