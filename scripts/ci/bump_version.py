@@ -56,7 +56,7 @@ def parse_git_history():
             if obj["group"] not in context["groups"]:
                 context["groups"][obj["group"]] = []
 
-            context["groups"][group].append(obj)
+            context["groups"][obj["group"]].append(obj)
 
             if obj["is_breaking_change"]:
                 bump_comp_idx = 0
