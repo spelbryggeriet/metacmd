@@ -43,7 +43,8 @@ def pr_merge(msg=None):
 
     run("gh", "pr", "merge",
         "--squash", "--delete-branch",
-        f"--subject={subject}", f"--body={body}")
+        f"--subject={subject}", f"--body={body}",
+        capture_output=False)
 
 
 if __name__ == "__main__":
