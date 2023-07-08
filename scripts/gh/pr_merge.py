@@ -41,7 +41,9 @@ def pr_merge(msg=None):
     subject = msg_lines[0]
     body = "\n".join(msg_lines[2:])
 
-    run("gh", "pr", "merge", "--squash", f"--subject={subject}", f"--body={body}")
+    run("gh", "pr", "merge",
+        "--squash", "--delete-branch",
+        f"--subject={subject}", f"--body={body}")
 
 
 if __name__ == "__main__":
