@@ -39,6 +39,7 @@ def pr_merge(should_squash=False):
 
         run("git", "-C", REPO_DIR, "reset", "--soft", "main", capture_output=False)
         run("git", "-C", REPO_DIR, "commit", "-m", msg, capture_output=False)
+        run("git", "-C", REPO_DIR, "push", "--force-with-lease", capture_output=False)
 
     refs, _ = run("git", "-C", REPO_DIR, "rev-list", "main..HEAD")
 

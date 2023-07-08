@@ -33,7 +33,7 @@ TYPES = {
 def parse_commit_msg(msg):
     regex = (
         "^(?P<type>[a-z]+)(\((?P<scope>[^)\n]+)\))?(?P<is_breaking>!)?: "
-        "(?P<group>[a-zA-Z]+) (?P<desc>[^\n]+)"
+        "(?P<group>[^\s]+) (?P<desc>[^\n]+)"
         "(\n\n(?P<body>[\s\S]+))?$"
     )
     match = re.match(regex, msg)
