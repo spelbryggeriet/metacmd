@@ -1,3 +1,3 @@
 /target
 /Cargo.lock
-/scripts/__pycache__
+__pycache__

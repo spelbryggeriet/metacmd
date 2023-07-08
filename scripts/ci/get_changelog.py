@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
 from get_version import get_version
-from util import error
 import json
 import os
 import sys
 
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-REPO_DIR = os.path.realpath(os.path.join(SCRIPT_DIR, ".."))
+REPO_DIR = os.path.realpath(os.path.join(SCRIPT_DIR, "../.."))
+
+sys.path.append(f"{SCRIPT_DIR}/..")
+from util import error
 
 
 def get_changelog_body():

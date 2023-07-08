@@ -27,12 +27,12 @@ jobs:
 
     - name: Bump version
       run: |
-        scripts/bump_version.py
+        scripts/ci/bump_version.py
 
     - name: Get version
       id: get_version
       run: |
-        version=`scripts/get_version.py`
+        version=`scripts/ci/get_version.py`
         echo "version=$version" >> $GITHUB_OUTPUT
 
     - name: Create release branch
@@ -87,7 +87,7 @@ jobs:
     - name: Get changelog
       id: get_changelog
       run: |
-        changelog_body=`scripts/get_changelog.py`
+        changelog_body=`scripts/ci/get_changelog.py`
         echo "changelog_body=${changelog_body}" >> $GITHUB_OUTPUT
 
     - name: Create release draft
