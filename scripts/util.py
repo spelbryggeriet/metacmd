@@ -67,7 +67,7 @@ def parse_commit_msg(msg):
     if type not in TYPES:
         error(f"Unsupported type: {type}")
 
-    if scope not in TYPES[type]:
+    if scope is not None and scope not in TYPES[type]:
         error(f"Unsupported scope: {scope}")
 
     if group in ["add", "support"]:
