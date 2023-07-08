@@ -49,7 +49,7 @@ def parse_git_history():
         bump_comp_idx = 2
         context = {"version": next_version, "groups": {}}
         for ref in refs.splitlines():
-            message, _ = run("git", "-C", REPO_DIR, "log", "--format=%B", "-n", "1", ref)
+            message, _ = run("git", "-C", REPO_DIR, "log", "--format=%B", "-1", ref)
 
             obj = parse_commit_msg(message)
 

@@ -14,6 +14,12 @@ def error(msg):
 
 def run(*cmd, capture_output=True):
     output = subprocess.run(cmd, capture_output=capture_output)
+
+    if output.returncode != 0:
+        if capture_output:
+            eprint(output.stderr.decode("utf-8").strip())
+        sys.exit(output.returncode)
+
     if capture_output:
         return output.stdout.decode("utf-8").strip(), output.stderr.decode("utf-8").strip()
 
