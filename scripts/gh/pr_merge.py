@@ -11,42 +11,35 @@ sys.path.append(f"{SCRIPT_DIR}/..")
 from util import eprint, error, parse_commit_msg, run
 
 
-def pr_merge_squash():
-    with tempfile.TemporaryDirectory() as temp:
-        path = os.path.join(temp, "gh-pr-msg")
+def pr_merge(should_squash=False):
+    output, _ = run("git", "-C", REPO_DIR, "status", "-s")
+    if len(output.strip()) > 0:
+        error(f"uncommited changes:\n{output}")
 
-        with open(path, "wb") as file:
-            output, _ = run("git", "-C", REPO_DIR, "log", "--format=* %s%n%b", "main..HEAD")
-            file.write(bytes("\n# ".join(["\n", *output.splitlines()]), "utf-8"))
-            file.flush()
+    if should_squash:
+        with tempfile.TemporaryDirectory() as temp:
+            path = os.path.join(temp, "gh-pr-msg")
 
-        run(os.environ.get("EDITOR", "vim"), path, capture_output=False)
+            with open(path, "wb") as file:
+                output, _ = run("git", "-C", REPO_DIR, "log", "--format=* %s%n%b", "main..HEAD")
+                file.write(bytes("\n# ".join(["\n", *output.splitlines()]), "utf-8"))
+                file.flush()
 
-        with open(path, "rb") as file:
-            msg = file.read().decode("utf-8").strip()
+            run(os.environ.get("EDITOR", "vim"), path, capture_output=False)
 
-    msg = "\n".join(filter(
-        lambda line: not line.startswith("#"),
-        map(lambda line: line.strip(), msg.splitlines())))
-    msg = msg.strip()
+            with open(path, "rb") as file:
+                msg = file.read().decode("utf-8").strip()
 
-    if len(msg) == 0:
-        eprint("Empty commit message, aborting")
-        return
+        msg = "\n".join(filter(
+            lambda line: not line.startswith("#"),
+            map(lambda line: line.strip(), msg.splitlines())))
+        msg = msg.strip()
 
-    parse_commit_msg(msg)
+        parse_commit_msg(msg)
 
-    msg_lines = msg.splitlines()
-    subject = msg_lines[0]
-    body = "\n".join(msg_lines[2:])
+        run("git", "-C", REPO_DIR, "reset", "--soft", "main", capture_output=False)
+        run("git", "-C", REPO_DIR, "commit", "-m", msg, capture_output=False)
 
-    run("gh", "pr", "merge",
-        "--squash", "--delete-branch",
-        f"--subject={subject}", f"--body={body}",
-        capture_output=False)
-
-
-def pr_merge_ff():
     refs, _ = run("git", "-C", REPO_DIR, "rev-list", "main..HEAD")
 
     for ref in refs.splitlines():
@@ -62,12 +55,11 @@ def pr_merge_ff():
 
 
 if __name__ == "__main__":
+    should_squash = False
     if len(sys.argv) >= 2:
         arg = sys.argv[1]
         if arg == "--squash":
             should_squash = True
-        elif arg == "--ff":
-            should_squash = False
         elif arg.startswith("-"):
             error(f"unknown flag: {arg}")
         else:
@@ -75,10 +67,5 @@ if __name__ == "__main__":
 
         if len(sys.argv) > 2:
             error(f"unexpected extra arguments: {' '.join(sys.argv[2:])}")
-    else:
-        error("expected either `--squash` flag or `--ff` flag")
 
-    if should_squash:
-        pr_merge_squash()
-    else:
-        pr_merge_ff()
+    pr_merge(should_squash)
