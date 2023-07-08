@@ -57,6 +57,8 @@ def pr_merge_ff():
     run("git", "-C", REPO_DIR, "checkout", "main", capture_output=False)
     run("git", "-C", REPO_DIR, "merge", source_branch, "--ff-only", capture_output=False)
     run("git", "-C", REPO_DIR, "push", capture_output=False)
+    run("git", "-C", REPO_DIR, "branch", "--delete", source_branch, capture_output=False)
+    run("git", "-C", REPO_DIR, "push", "origin", "--delete", source_branch, capture_output=False)
 
 
 if __name__ == "__main__":
