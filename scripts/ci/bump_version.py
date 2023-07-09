@@ -52,6 +52,8 @@ def parse_git_history():
             message, _ = run("git", "-C", REPO_DIR, "log", "--format=%B", "-1", ref)
 
             obj = parse_commit_msg(message)
+            if obj is None:
+                continue
 
             if obj["group"] not in context["groups"]:
                 context["groups"][obj["group"]] = []

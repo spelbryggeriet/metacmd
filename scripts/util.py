@@ -30,6 +30,7 @@ TYPES = {
     "ci": ["scripts"],
     "docs": [],
 }
+IGNORED_TYPES = ["release"]
 def parse_commit_msg(msg):
     regex = (
         "^(?P<type>[a-z]+)(\((?P<scope>[^)\n]+)\))?(?P<is_breaking>!)?: "
@@ -41,6 +42,10 @@ def parse_commit_msg(msg):
         error(f'Failed parsing: "{msg}"')
 
     type = match.group("type")
+
+    if type in IGNORED_TYPES:
+        return None
+
     scope = match.group("scope")
     is_breaking = match.group("is_breaking") is not None
     group = match.group("group").lower()
