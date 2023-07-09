@@ -39,7 +39,7 @@ def parse_git_history():
 
     contexts = []
     for prev_version, next_version in zip(prev_versions, next_versions):
-        to_ref = next_version or "head"
+        to_ref = next_version or "HEAD"
 
         if prev_version is not None:
             refs, _ = run("git", "-C", REPO_DIR, "rev-list", f"{prev_version}..{to_ref}")
