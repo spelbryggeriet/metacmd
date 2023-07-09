@@ -1,6 +1,6 @@
 [package]
 name = "metacmd"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
 description = "Abstracting commands over multiple environments"
 readme = "README.md"
