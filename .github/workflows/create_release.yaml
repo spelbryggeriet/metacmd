@@ -77,7 +77,7 @@ jobs:
       uses: octokit/request-action@v2.x
       with:
         route: PUT /repos/${{ github.repository }}/pulls/${{ env.PULL_NUMBER }}/merge
-        commit_title: Prepare release v${{ env.VERSION }} (#${{ env.PULL_NUMBER }})
+        commit_title: "release: Prepare v${{ env.VERSION }} (#${{ env.PULL_NUMBER }})"
         merge_method: squash
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

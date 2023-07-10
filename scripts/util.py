@@ -41,9 +41,9 @@ def parse_commit_msg(msg):
     if match is None:
         error(f'Failed parsing: "{msg}"')
 
-    type = match.group("type")
+    change_type = match.group("type")
 
-    if type in IGNORED_TYPES:
+    if change_type in IGNORED_TYPES:
         return None
 
     scope = match.group("scope")
@@ -69,17 +69,17 @@ def parse_commit_msg(msg):
         if breaking_desc is not None:
             breaking_desc = re.sub(whitespace_regex, " ", breaking_desc)
 
-    if type not in TYPES:
-        error(f"Unsupported type: {type}")
+    if change_type not in TYPES:
+        error(f"Unsupported change type: {change_type}")
 
-    if scope is not None and scope not in TYPES[type]:
+    if scope is not None and scope not in TYPES[change_type]:
         error(f"Unsupported scope: {scope}")
 
     if group in ["add", "support"]:
         group = "Added"
     elif group in ["remove", "delete"]:
         group = "Removed"
-    elif group == "fix" or type == "fix":
+    elif group == "fix" or change_type == "fix":
         if group != "fix":
             desc = f"Fixed {desc}"
         group = "Fixed"
@@ -87,27 +87,28 @@ def parse_commit_msg(msg):
         desc = f"{group} {desc}"
         group = "Changed"
 
-    obj = {
+    change = {
+        "type": change_type,
         "group": group,
         "description": "%c%s%s" % (desc[0].upper(), desc[1:], "." if desc[-1] != "." else ""),
         "is_breaking_change": is_breaking or breaking_desc is not None,
     }
 
     if scope is not None:
-        obj["scope"] = scope
+        change["scope"] = scope
 
     if body is not None:
-        obj["long_description"] = "%c%s%s" % (
+        change["long_description"] = "%c%s%s" % (
             body[0].upper(),
             body[1:],
             "." if body[-1] != "." else ""
         )
 
     if breaking_desc is not None:
-        obj["breaking_change_description"] = "%c%s" % (
+        change["breaking_change_description"] = "%c%s" % (
             breaking_desc[0].upper(),
             breaking_desc[1:],
             "." if breaking_desc[-1] != "." else ""
         )
 
-    return obj
+    return change

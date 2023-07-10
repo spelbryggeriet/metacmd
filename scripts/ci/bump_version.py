@@ -37,7 +37,7 @@ def parse_git_history():
     prev_versions = [None, *versions.splitlines()]
     next_versions = [*versions.splitlines(), None]
 
-    contexts = []
+    releases = []
     for prev_version, next_version in zip(prev_versions, next_versions):
         to_ref = next_version or "HEAD"
 
@@ -47,30 +47,43 @@ def parse_git_history():
             refs, _ = run("git", "-C", REPO_DIR, "rev-list", f"{to_ref}")
 
         bump_comp_idx = 2
-        context = {"version": next_version, "groups": {}}
+        release = {"version": next_version, "groups": {}}
         for ref in refs.splitlines():
             message, _ = run("git", "-C", REPO_DIR, "log", "--format=%B", "-1", ref)
 
-            obj = parse_commit_msg(message)
-            if obj is None:
+            change = parse_commit_msg(message)
+            if change is None:
                 continue
 
-            if obj["group"] not in context["groups"]:
-                context["groups"][obj["group"]] = []
+            group_name = change["group"]
+            if group_name not in release["groups"]:
+                release["groups"][group_name] = {"unscoped": [], "scopes": {}} 
+            group = release["groups"][group_name]
 
-            context["groups"][obj["group"]].append(obj)
+            if "scope" not in change:
+                scope = group["unscoped"]
+            else:
+                scope_name = change["scope"]
+                if change["scope"] not in group["scopes"]:
+                    group["scopes"][scope_name] = []
+                scope = group["scopes"][scope_name]
+            scope.append(change)
 
-            if obj["is_breaking_change"]:
+            if change["is_breaking_change"]:
                 bump_comp_idx = 0
-            elif type == "feat" and bump_comp_idx > 1:
+            elif change["type"] == "feat" and bump_comp_idx > 1:
                 bump_comp_idx = 1
 
-        if context["version"] is None:
-            context["version"] = get_next_version(bump_comp_idx, get_current_version())
+        release["groups"] = {i: v for i, v in sorted(release["groups"].items())}
+        for group in release["groups"].values():
+            group["scopes"] = {i: v for i, v in sorted(group["scopes"].items())}
 
-        contexts.append(context)
+        if release["version"] is None:
+            release["version"] = get_next_version(bump_comp_idx, get_current_version())
 
-    return contexts
+        releases.append(release)
+
+    return releases
 
 
 def update_version_file(new_version, path):
@@ -92,7 +105,7 @@ def update_manifest(new_version, path, current_version):
         f.write(new_content)
 
 
-def update_changelog(contexts, path):
+def update_changelog(releases, path):
     changelog = (
         "# Changelog\n\n"
         "All notable changes to this project will be documented in this file.\n\n"
@@ -100,19 +113,24 @@ def update_changelog(contexts, path):
         "adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."
     )
 
-    for context in reversed(contexts):
-        if context["version"] == contexts[-1]["version"]:
+    for release in reversed(releases):
+        if release["version"] == releases[-1]["version"]:
             date = datetime.datetime.now(datetime.timezone.utc)
         else:
-            raw_date, _ = run("git", "-C", REPO_DIR, "show", context["version"], "--format=%ci")
+            raw_date, _ = run("git", "-C", REPO_DIR, "log", "-1", release["version"], "--format=%ci")
             date = datetime.datetime.strptime(raw_date, "%Y-%m-%d %H:%M:%S %z")
-            
+
         formatted_date = date.strftime("%Y-%m-%d")
-        changelog += "\n\n## [%s] - %s" % (context["version"], formatted_date)
+        changelog += "\n\n## [%s] - %s" % (
+            release["version"][1:] if release["version"].startswith("v") else release["version"], 
+            formatted_date,
+        )
 
-        for group, changes in context["groups"].items():
-            changelog += f"\n\n### {group}\n"
+        for group_name, group in release["groups"].items():
+            changelog += f"\n\n### {group_name}\n"
 
+            changes = [*reversed(group["unscoped"]), *[change for scope in group["scopes"].values() 
+                                                              for change in reversed(scope)]]
             for change in changes:
                 changelog += "\n- "
                 if "scope" in change:
@@ -131,15 +149,15 @@ def update_changelog(contexts, path):
 
 
 def bump_version(dry_run):
-    contexts = parse_git_history()
+    releases = parse_git_history()
 
     current_version = get_current_version()
-    new_version = contexts[-1]["version"]
+    new_version = releases[-1]["version"]
 
     if not dry_run:
         update_version_file(new_version, "VERSION")
         update_manifest(new_version, "Cargo.toml", current_version)
-        update_changelog(contexts, "CHANGELOG.md")
+        update_changelog(releases, "CHANGELOG.md")
 
     return new_version
 
