@@ -40,7 +40,7 @@ jobs:
       - name: Fetch badge
         run: |
           mkdir _site
-          curl "https://img.shields.io/badge/upcoming_version-${VERSION}-blue" > "_site/upcoming_version.svg"
+          curl "https://img.shields.io/badge/upcoming_version-v${VERSION}-blue" > "_site/upcoming_version.svg"
         env:
           VERSION: ${{ steps.bump_version.outputs.version }}
 
