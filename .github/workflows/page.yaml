@@ -1,0 +1,57 @@
+name: Page
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check branch
+        run: |
+          if [[ ! `git branch --show-current` = 'main' ]] ; then
+            echo "Releases can only be created from the \`main\` branch" >&2
+            exit 1
+          fi
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          version=`scripts/ci/bump_version.py --dry-run`
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Fetch badge
+        run: |
+          curl "https://img.shields.io/badge/upcoming_version-${VERSION}-blue" > "$RUNNER_TEMP/upcoming_version.svg"
+        env:
+          VERSION: ${{ steps.bump_version.outputs.version }}
+
+      - name: Archive artifact
+        run: |
+          tar -cvf "$RUNNER_TEMP/artifact.tar" "$RUNNER_TEMP/upcoming_version.svg"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/artifact.tar
+          retention-days: 1
+          if-no-files-found: error
+
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
