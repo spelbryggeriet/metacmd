@@ -26,21 +26,13 @@ jobs:
 
       - name: Fetch badge
         run: |
-          curl "https://img.shields.io/badge/upcoming_version-${VERSION}-blue" > "$RUNNER_TEMP/upcoming_version.svg"
+          mkdir _site
+          curl "https://img.shields.io/badge/upcoming_version-${VERSION}-blue" > "_site/upcoming_version.svg"
         env:
           VERSION: ${{ steps.bump_version.outputs.version }}
 
-      - name: Archive artifact
-        run: |
-          tar -czvf "$RUNNER_TEMP/artifact.tar.gz" "$RUNNER_TEMP/upcoming_version.svg"
-
       - name: Upload artifact
         uses: actions/upload-artifact@v3
-        with:
-          name: github-pages
-          path: ${{ runner.temp }}/artifact.tar.gz
-          retention-days: 1
-          if-no-files-found: error
 
   deploy:
     needs: build
