@@ -32,13 +32,13 @@ jobs:
 
       - name: Archive artifact
         run: |
-          tar -cvf "$RUNNER_TEMP/artifact.tar" "$RUNNER_TEMP/upcoming_version.svg"
+          tar -czvf "$RUNNER_TEMP/artifact.tar.gz" "$RUNNER_TEMP/upcoming_version.svg"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: github-pages
-          path: ${{ runner.temp }}/artifact.tar
+          path: ${{ runner.temp }}/artifact.tar.gz
           retention-days: 1
           if-no-files-found: error
 
